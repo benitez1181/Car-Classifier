@@ -6,9 +6,29 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import layers
 
+def move_class(name,brands):
+  os.mkdir(name)
+  new_directory = Path(name)
+
+  for dirpath, dirname, filenames in os.walk(data/ "training_set"):
+    if os.path.basename(dirpath) in brands:
+      shutil.move(dirpath, new_directory)
+
+  return new_directory
+
+brands = ["Toyota", "Audi", "Hyundai", "Nissan", "BMW", "Chevrolet", "Ford", "Volkswagen", "Dodge", "Mercedes"]
+training = move_class("new_training", brands)
+
+# Data augmentation
+augmentation = tf.keras.Sequential([
+    layers.RandomFlip("horizontal"),
+    layers.RandomZoom(0.2)
+])
+
 # Building the Model 
-inputs = layers.Input(shape=(220,220,3))
-rescaling = layers.Rescaling(1./255)(inputs) # Normalizes the pixels in the range of 0-1
+input = tf.keras.Input(shape=(200,200,3))
+x = augmentation(input)
+rescaling = layers.Rescaling(1./255)(x) # Normalizes the pixels in the range of 0-1
 x = layers.Conv2D(filters=32, kernel_size=3, activation="relu")(rescaling)
 x = layers.MaxPooling2D(pool_size=(2,2))(x)
 x = layers.Conv2D(filters=64, kernel_size=3, activation="relu")(x)
@@ -18,10 +38,14 @@ x = layers.MaxPooling2D(pool_size=(2,2))(x)
 x = layers.Conv2D(filters=256, kernel_size=3, activation="relu")(x)
 x = layers.MaxPooling2D(pool_size=(2,2))(x)
 x = layers.Conv2D(filters=256, kernel_size=3, activation="relu")(x)
+x = layers.MaxPooling2D(pool_size=(2,2))(x)
+x = layers.Conv2D(filters=512, kernel_size=(2,2), activation='relu')(x)
+x = layers.Conv2D(filters=512, kernel_size=(2,2), activation='relu')(x)
 x = layers.Flatten()(x)
-outputs = layers.Dense(17, activation="softmax")(x)
+x= layers.Dense(50, activation='relu')(x)
+outputs = layers.Dense(10, activation="softmax")(x)
 
-my_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+my_model = tf.keras.Model(inputs=input, outputs=outputs)
 
 callbacks = [
     tf.keras.callbacks.ModelCheckpoint(filepath="convnet_from_scratch.keras",
